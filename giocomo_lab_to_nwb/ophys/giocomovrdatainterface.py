@@ -1,7 +1,4 @@
-import json
 import pickle
-import uuid
-from datetime import datetime
 from pathlib import Path
 
 from nwb_conversion_tools import NWBConverter
@@ -11,7 +8,6 @@ from nwb_conversion_tools.utils import get_schema_from_hdmf_class
 from pynwb import NWBFile, TimeSeries
 from pynwb.behavior import BehavioralTimeSeries
 from pynwb.file import Subject
-from pytz import timezone
 
 
 class GiocomoVRInterface(BaseDataInterface):
@@ -56,7 +52,7 @@ class GiocomoVRInterface(BaseDataInterface):
 
     def get_metadata_schema(self):
         metadata_schema = NWBConverter.get_metadata_schema()
-        metadata_schema['required'].append('behavior', 'stimulus')
+        metadata_schema['required'] = ['behavior', 'stimulus']
         metadata_schema['properties']['behavior'] = get_base_schema()
         metadata_schema['properties']['stimulus'] = get_base_schema()
         metadata_schema['properties']['behavior']['properties'] = dict(
@@ -64,36 +60,7 @@ class GiocomoVRInterface(BaseDataInterface):
         )
 
     def get_metadata(self):
-        exp_desc = self.file_path.parents[0].name
-        date = self.file_path.parents[1].name
-        time_zone = timezone('US/Pacific')
-        subject_num = self.file_path.parents[2].name
-        session_desc = self.file_path.stem
-        subject_info_path = Path(__file__).parent/'subjectdata.json'
-        with open(str(subject_info_path), 'r') as js:
-            all_sub_details = json.load(js)
-        subject_details = all_sub_details[subject_num]
         metadata = dict(
-            NWBFile=dict(
-                session_description=session_desc,
-                identifier=str(uuid.uuid4()),
-                session_start_time=datetime.strptime(date, "%d_%m_%Y").astimezone(time_zone),
-                experiment_description=exp_desc,
-                virus=f'virus injection date: {subject_details["virus injection date"]}, '
-                      f'virus: {subject_details["VIRUS"]}',
-                surgery=f'cannula implant date: {subject_details["cannula implant date"]}',
-                lab='GiocomoLab',
-                institution='Stanford University School of Medicine',
-                experimenter='Mark Plitt'
-            ),
-            Subject=dict(
-                subject_id=subject_details['ID'],
-                species=subject_details['species'],
-                date_of_birth=datetime.strptime(subject_details['DOB'], "%Y-%m-%d %H:%M:%S").astimezone(time_zone),
-                genotype=subject_details['genotype'],
-                sex=subject_details['sex'],
-                weight=subject_details['weight at time of implant']
-            ),
             Behavior=dict(
                 time_series=[beh_arg for beh_arg in self.beh_args if beh_arg['name'] in self.data_frame]
             ),
